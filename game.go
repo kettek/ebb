@@ -1,8 +1,10 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"image/color"
+	"io/fs"
 	"log"
 	"os"
 	"strings"
@@ -11,15 +13,19 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
+	"github.com/kettek/go-multipath/v2"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
 )
 
+//go:embed data/*
+var embedFS embed.FS
 var (
 	gameFont font.Face
 )
 
 type Game struct {
+	fs          multipath.FS
 	cochan      chan func() bool
 	routines    []func() bool
 	objects     []*Object
@@ -29,7 +35,14 @@ type Game struct {
 }
 
 func (g *Game) Init() {
-	bytes, err := os.ReadFile("runescape-npc-chat.ttf")
+	g.fs.InsertFS(os.DirFS("data"), multipath.FirstPriority)
+	sub, err := fs.Sub(embedFS, "data")
+	if err != nil {
+		log.Fatal(err)
+	}
+	g.fs.InsertFS(sub, multipath.LastPriority)
+
+	bytes, err := g.fs.ReadFile("runescape-npc-chat.ttf")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -268,7 +281,7 @@ func (g *Game) loadImage(s string) *ebiten.Image {
 	if img, ok := g.images[s]; ok {
 		return img
 	}
-	img, _, err := ebitenutil.NewImageFromFile(s + ".png")
+	img, _, err := ebitenutil.NewImageFromFileSystem(g.fs, s+".png")
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/hajimehoshi/ebiten/v2 v2.4.16
+	github.com/kettek/go-multipath/v2 v2.0.0-alpha.11
 	golang.org/x/image v0.1.0
 )
 
