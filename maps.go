@@ -176,7 +176,6 @@ func init() {
 				player = a.GetObject("player")
 			}
 			if first {
-				a.Freeze()
 				npc := a.GetObject("npc")
 				door := a.GetObject("east door")
 				a.FollowObject(player)
@@ -187,6 +186,7 @@ func init() {
 				npc.Say("have you heard of the high elves?")
 				player.Say("no")
 				npc.Say("me neither")
+				a.Freeze()
 				npc2 := a.NewObject("npc 2", "character", &color.RGBA{R: 255, G: 0, B: 255, A: 255})
 				door.SetImage("door-open")
 				door.SetBlocking(false)
