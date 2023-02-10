@@ -10,10 +10,12 @@ import (
 
 type Area struct {
 	game        *Game
+	mappe       *Map
 	cochan      chan func() bool
 	routines    []func() bool
 	objects     []*Object
 	target      *Object
+	created     bool
 	lockedInput bool
 }
 
@@ -150,6 +152,26 @@ func (a *Area) GetObject(tag string) *Object {
 	return <-done
 }
 
+func (a *Area) RemoveObject(tag string) *Object {
+	done := make(chan *Object)
+	a.submit(func() bool {
+		o := a.getObject(tag)
+		done <- o
+		return true
+	})
+	return <-done
+}
+
+func (a *Area) removeObject(o *Object) *Object {
+	for i, o2 := range a.objects {
+		if o == o2 {
+			a.objects = append(a.objects[:i], a.objects[i+1:]...)
+			return o
+		}
+	}
+	return nil
+}
+
 func (a *Area) PlaceObject(o *Object, x, y int) *Object {
 	done := make(chan bool)
 	a.submit(func() bool {
@@ -235,4 +257,8 @@ func (a *Area) Scene(fnc func()) {
 		return false
 	})
 	<-done
+}
+
+func (a *Area) Travel(s string, o *Object) {
+	a.game.LoadArea(s, o)
 }

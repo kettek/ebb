@@ -26,9 +26,13 @@ type Game struct {
 	images      map[string]*ebiten.Image
 	areas       map[string]*Area
 	currentArea *Area
+	cochan      chan func() bool
+	routines    []func() bool
 }
 
 func (g *Game) Init() {
+	g.cochan = make(chan func() bool, 10)
+
 	g.fs.InsertFS(os.DirFS("data"), multipath.FirstPriority)
 	sub, err := fs.Sub(embedFS, "data")
 	if err != nil {
@@ -56,11 +60,26 @@ func (g *Game) Init() {
 		log.Fatal(err)
 	}
 
-	g.areas["start"] = g.loadMap(Maps["start"])
-	g.currentArea = g.areas["start"]
+	g.loadArea("start", nil)
 }
 
 func (g *Game) Update() error {
+	for done := false; !done; {
+		select {
+		case routine := <-g.cochan:
+			g.routines = append(g.routines, routine)
+		default:
+			done = true
+		}
+	}
+	routines := g.routines[:0]
+	for _, r := range g.routines {
+		if !r() {
+			routines = append(routines, r)
+		}
+	}
+	g.routines = routines
+
 	if g.currentArea != nil {
 		if err := g.currentArea.Update(); err != nil {
 			panic(err)
@@ -93,14 +112,35 @@ func (g *Game) loadImage(s string) *ebiten.Image {
 	return img
 }
 
-// Maps
-func (g *Game) loadMap(m *Map) *Area {
-	area := &Area{
-		game:   g,
-		cochan: make(chan func() bool, 10),
+func (g *Game) LoadArea(s string, o *Object) *Area {
+	done := make(chan *Area)
+	select {
+	case g.cochan <- func() bool {
+		done <- g.loadArea(s, o)
+		return true
+	}:
+	default:
+	}
+	return <-done
+}
+
+func (g *Game) loadArea(s string, o *Object) *Area {
+	area := g.areas[s]
+	if area == nil {
+		area = &Area{
+			game:   g,
+			cochan: make(chan func() bool, 10),
+		}
 	}
 
-	if !m.created {
+	m := Maps[s]
+	if m == nil {
+		panic("no map")
+	}
+
+	area.mappe = m
+
+	if !area.created {
 		lines := strings.Split(m.tiles, "\n")[1:]
 		for y, line := range lines {
 			for x, r := range line {
@@ -119,17 +159,21 @@ func (g *Game) loadMap(m *Map) *Area {
 				}
 			}
 		}
-
-		if m.load != nil {
-			go func() {
-				area.Freeze()
-				m.load(g, area)
-				area.Thaw()
-			}()
-		}
-		m.created = true
-	} else {
-		// ???
 	}
+
+	go func(area *Area, prev *Area, first bool, triggering *Object) {
+		if prev != nil && prev.mappe.leave != nil {
+			prev.mappe.leave(prev, area, triggering)
+		}
+		if area.mappe.enter != nil {
+			area.mappe.enter(area, prev, triggering, first)
+		}
+		// ... send area chan with new area...
+	}(area, g.currentArea, !area.created, o)
+
+	area.created = true
+	g.areas[s] = area
+	g.currentArea = area
+
 	return area
 }

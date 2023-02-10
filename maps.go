@@ -10,7 +10,8 @@ type ThingCreatorFuncs map[rune]ThingCreatorFunc
 
 type Map struct {
 	title   string
-	load    func(g *Game, a *Area)
+	enter   func(a, previousArea *Area, triggering *Object, first bool)
+	leave   func(a, previousArea *Area, triggering *Object)
 	loaded  func(g *Game, a *Area)
 	tiles   string
 	things  ThingCreatorFuncs
@@ -76,13 +77,6 @@ var GlobalThings = ThingCreatorFuncs{
 			},
 		}
 	},
-	'E': func(g *Game) *Object {
-		return &Object{
-			tag:   "east exit",
-			image: g.loadImage("exit"),
-			color: &color.RGBA{R: 255, G: 255, B: 255, A: 255},
-		}
-	},
 	'T': func(g *Game) *Object {
 		table := "table"
 		if rand.Intn(2) == 1 {
@@ -98,7 +92,7 @@ var GlobalThings = ThingCreatorFuncs{
 						return true
 					}
 					if act == "interact" || toucher.lastTouched == o {
-						go o.Say("*snarf*")
+						go toucher.Say("*snarf*")
 						o.image = g.loadImage("table")
 					}
 				}
@@ -129,8 +123,10 @@ var GlobalThings = ThingCreatorFuncs{
 	},
 }
 
-var Maps = map[string]*Map{
-	"start": {
+var Maps map[string]*Map = make(map[string]*Map)
+
+func init() {
+	Maps["start"] = &Map{
 		title: "a start",
 		tiles: `
    ##########**
@@ -155,42 +151,106 @@ var Maps = map[string]*Map{
 					color: &color.RGBA{R: 255, G: 255, B: 255, A: 255},
 				}
 			},
+			'E': func(g *Game) *Object {
+				return &Object{
+					tag:   "east exit",
+					image: g.loadImage("exit"),
+					color: &color.RGBA{R: 255, G: 255, B: 255, A: 255},
+					touch: func(o, toucher *Object, act string) (shouldBlock bool) {
+						go o.area.Travel("east woods", toucher)
+						return true
+					},
+				}
+			},
 		},
-		load: func(g *Game, a *Area) {
-			npc := a.GetObject("npc")
-			player := a.GetObject("player")
-			door := a.GetObject("east door")
-			a.FollowObject(player)
-			a.Delay(60)
-			npc.Say("hey, come here!")
-			player.WalkTo(npc)
-			a.Delay(20)
-			npc.Say("have you heard of the high elves?")
-			player.Say("no")
-			npc.Say("me neither")
-			npc2 := a.NewObject("npc 2", "character", &color.RGBA{R: 255, G: 0, B: 255, A: 255})
-			door.SetImage("door-open")
-			door.SetBlocking(false)
-			a.PlaceObject(npc2, door.x, door.y)
-			a.FollowObject(npc2)
-			door.Say("*bang*")
-			a.Delay(30)
-			npc2.Step(-1, 0)
-			a.Delay(30)
-			door.SetImage("door")
-			door.SetBlocking(true)
-			a.Delay(30)
-			npc2.Say("...greetings")
-			a.Delay(10)
-			npc2.WalkTo(npc)
-			a.Delay(20)
-			npc2.Say("I have heard of the high elves")
-			//
-			a.FollowObject(player)
-			a.Thaw()
-			a.Delay(300)
-			npc.Say("They're a devious bunch")
-			npc2.Say("You don't know the half of it")
+		enter: func(a *Area, prev *Area, triggering *Object, first bool) {
+			player := triggering
+			if player == nil {
+				player = a.GetObject("player")
+			}
+			if first {
+				npc := a.GetObject("npc")
+				door := a.GetObject("east door")
+				a.FollowObject(player)
+				a.Delay(60)
+				npc.Say("hey, come here!")
+				player.WalkTo(npc)
+				a.Delay(20)
+				npc.Say("have you heard of the high elves?")
+				player.Say("no")
+				npc.Say("me neither")
+				npc2 := a.NewObject("npc 2", "character", &color.RGBA{R: 255, G: 0, B: 255, A: 255})
+				door.SetImage("door-open")
+				door.SetBlocking(false)
+				a.PlaceObject(npc2, door.x, door.y)
+				a.FollowObject(npc2)
+				door.Say("*bang*")
+				a.Delay(30)
+				npc2.Step(-1, 0)
+				a.Delay(30)
+				door.SetImage("door")
+				door.SetBlocking(true)
+				a.Delay(30)
+				npc2.Say("...greetings")
+				a.Delay(10)
+				npc2.WalkTo(npc)
+				a.Delay(20)
+				npc2.Say("I have heard of the high elves")
+				//
+				a.FollowObject(player)
+				a.Thaw()
+				a.Delay(300)
+				npc.Say("They're a devious bunch")
+				npc2.Say("You don't know the half of it")
+				a.Thaw()
+			} else {
+				door := a.GetObject("east exit")
+				a.Exec(func() {
+					prev.removeObject(player)
+				})
+				a.PlaceObject(player, door.x-1, door.y)
+			}
 		},
-	},
+	}
+	Maps["east woods"] = &Map{
+		title: "the east woods",
+		tiles: `
+****************
+***********
+****/////
+*////*///
+*/******
+**/***
+*//**  /
+<         *
+*//**   //*
+*/****
+*/*////*
+*****/***
+**********/
+*/
+`,
+		things: ThingCreatorFuncs{
+			'<': func(g *Game) *Object {
+				return &Object{
+					tag:   "west exit",
+					image: g.loadImage("exit"),
+					color: &color.RGBA{R: 255, G: 255, B: 255, A: 255},
+					touch: func(o, toucher *Object, act string) (shouldBlock bool) {
+						go o.area.Travel("start", toucher)
+						return true
+					},
+				}
+			},
+		},
+		enter: func(a *Area, prev *Area, triggering *Object, first bool) {
+			player := triggering
+			a.FollowObject(player)
+			door := a.GetObject("west exit")
+			a.Exec(func() {
+				prev.removeObject(player)
+			})
+			a.PlaceObject(player, door.x+1, door.y)
+		},
+	}
 }
