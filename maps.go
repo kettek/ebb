@@ -2,6 +2,7 @@ package main
 
 import (
 	"image/color"
+	"math/rand"
 )
 
 type ThingCreatorFunc func(g *Game) *Object
@@ -83,9 +84,27 @@ var GlobalThings = ThingCreatorFuncs{
 		}
 	},
 	'T': func(g *Game) *Object {
+		table := "table"
+		if rand.Intn(2) == 1 {
+			table = "table-food"
+		}
 		return &Object{
-			image: g.loadImage("table"),
+			image: g.loadImage(table),
 			color: &color.RGBA{R: 145, G: 22, B: 22, A: 255},
+			touch: func(o *Object, toucher *Object, act string) (blocked bool) {
+				if o.image == g.loadImage("table-food") {
+					if act == "" && toucher.lastTouched != o {
+						go toucher.Say("food!")
+						return true
+					}
+					if act == "interact" || toucher.lastTouched == o {
+						go o.Say("*snarf*")
+						o.image = g.loadImage("table")
+					}
+				}
+
+				return true
+			},
 		}
 	},
 	'h': func(g *Game) *Object {
