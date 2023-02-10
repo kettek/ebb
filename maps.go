@@ -176,6 +176,7 @@ func init() {
 				player = a.GetObject("player")
 			}
 			if first {
+				a.Freeze()
 				npc := a.GetObject("npc")
 				door := a.GetObject("east door")
 				a.FollowObject(player)
@@ -209,7 +210,6 @@ func init() {
 				a.Delay(300)
 				npc.Say("They're a devious bunch")
 				npc2.Say("You don't know the half of it")
-				a.Thaw()
 			} else {
 				door := a.GetObject("east exit")
 				a.Exec(func() {
