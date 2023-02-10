@@ -121,6 +121,13 @@ var GlobalThings = ThingCreatorFuncs{
 			color: &color.RGBA{R: 165, G: 42, B: 42, A: 255},
 		}
 	},
+	'~': func(g *Game) *Object {
+		return &Object{
+			image:   g.loadImage("water"),
+			color:   &color.RGBA{R: 0, G: 64, B: 255, A: 255},
+			noblock: true,
+		}
+	},
 }
 
 var Maps map[string]*Map = make(map[string]*Map)
@@ -220,14 +227,14 @@ func init() {
 ****/////
 *////*///
 */******
-**/***
-*//**  /
-<         *
-*//**   //*
-*/****
-*/*////*
-*****/***
-**********/
+**/***       .,
+*//**  / .  .,~,
+<........ * ,~v~~,
+*//**   //* ,~~~,
+*/****  . ..,,~~,
+*/*////*   ..,~,
+*****/***    ,,
+**********/   ,
 */
 `,
 		things: ThingCreatorFuncs{
@@ -242,6 +249,32 @@ func init() {
 					},
 				}
 			},
+			'v': func(g *Game) *Object {
+				return &Object{
+					image: g.loadImage("whirlpool"),
+					color: &color.RGBA{R: 64, G: 128, B: 255, A: 255},
+					touch: func(o, toucher *Object, act string) (shouldBlock bool) {
+						go o.area.Travel("pool", toucher)
+						return true
+					},
+				}
+			},
+			',': func(g *Game) *Object {
+				opts := []string{
+					"*shplut*",
+					"*splort*",
+				}
+				return &Object{
+					image: g.loadImage("grass"),
+					color: &color.RGBA{R: 64, G: 196, B: 255, A: 255},
+					touch: func(o, toucher *Object, act string) (shouldBlock bool) {
+						sfx := opts[rand.Intn(len(opts))]
+						go o.Say(sfx)
+						return false
+					},
+					noblock: true,
+				}
+			},
 		},
 		enter: func(a *Area, prev *Area, triggering *Object, first bool) {
 			player := triggering
@@ -253,4 +286,61 @@ func init() {
 			a.PlaceObject(player, door.x+1, door.y)
 		},
 	}
+	Maps["pool"] = &Map{
+		title: "pool of whirling",
+		tiles: `
+ #########
+ #~~~~~~~#
+#~~~~~~~~~#
+#~~~~~~^~~~#
+ #~~~~~~~~##
+ #~~~~~~~~~~#
+ #~~~#####~~#
+  #~#     #~~#
+ ##~###### ##
+#~~~~~~~f~#
+ ##~~#####
+   #~#
+    #
+`,
+		things: ThingCreatorFuncs{
+			'^': func(g *Game) *Object {
+				return &Object{
+					tag:   "up exit",
+					image: g.loadImage("exit"),
+					color: &color.RGBA{R: 64, G: 128, B: 255, A: 255},
+					touch: func(o, toucher *Object, act string) (shouldBlock bool) {
+						go o.area.Travel("east woods", toucher)
+						return true
+					},
+				}
+			},
+			'#': func(g *Game) *Object {
+				return &Object{
+					image: g.loadImage("groundwall"),
+					color: &color.RGBA{R: 96, G: 60, B: 12, A: 255},
+				}
+			},
+			'f': func(g *Game) *Object {
+				return &Object{
+					image: g.loadImage("froge"),
+					color: &color.RGBA{R: 64, G: 255, B: 160, A: 255},
+					touch: func(o, toucher *Object, act string) (shouldBlock bool) {
+						go o.Say("*ribbt*")
+						return true
+					},
+				}
+			},
+		},
+		enter: func(a *Area, prev *Area, triggering *Object, first bool) {
+			player := triggering
+			a.FollowObject(player)
+			door := a.GetObject("up exit")
+			a.Exec(func() {
+				prev.removeObject(player)
+			})
+			a.PlaceObject(player, door.x-1, door.y)
+		},
+	}
+
 }
