@@ -161,6 +161,8 @@ func (g *Game) loadArea(s string, o *Object) *Area {
 		}
 	}
 
+	area.sortObjects()
+
 	go func(area *Area, prev *Area, first bool, triggering *Object) {
 		if prev != nil && prev.mappe.leave != nil {
 			prev.mappe.leave(prev, area, triggering)

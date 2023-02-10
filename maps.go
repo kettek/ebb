@@ -24,6 +24,7 @@ var GlobalThings = ThingCreatorFuncs{
 			tag:   "player",
 			image: g.loadImage("character"),
 			color: &color.RGBA{R: 255, G: 255, B: 0, A: 255},
+			z:     1,
 		}
 	},
 	'#': func(g *Game) *Object {
@@ -47,6 +48,7 @@ var GlobalThings = ThingCreatorFuncs{
 		return &Object{
 			image:   g.loadImage("tree-hideable"),
 			noblock: true,
+			z:       10,
 		}
 	},
 	'+': func(g *Game) *Object {
@@ -156,6 +158,7 @@ func init() {
 					tag:   "npc",
 					image: g.loadImage("character"),
 					color: &color.RGBA{R: 255, G: 255, B: 255, A: 255},
+					z:     1,
 				}
 			},
 			'E': func(g *Game) *Object {

@@ -13,6 +13,7 @@ type Object struct {
 	title        string
 	tag          string
 	x, y         int
+	z            int
 	iterX, iterY float64
 	saying       string
 	image        *ebiten.Image
