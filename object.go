@@ -10,23 +10,38 @@ import (
 type Object struct {
 	game *Game
 	//
-	title   string
-	tag     string
-	x, y    int
-	saying  string
-	image   *ebiten.Image
-	noblock bool
-	color   *color.RGBA
+	title        string
+	tag          string
+	x, y         int
+	iterX, iterY float64
+	saying       string
+	image        *ebiten.Image
+	noblock      bool
+	color        *color.RGBA
+	touch        func(o *Object, toucher *Object, act string) (shouldBlock bool)
+	lastTouched  *Object
 }
 
 func (o *Object) Draw(screen *ebiten.Image, screenOpts *ebiten.DrawImageOptions) {
 	opts := &ebiten.DrawImageOptions{}
 	x := float64(o.x * o.image.Bounds().Dx())
 	y := float64(o.y * o.image.Bounds().Dy())
+
+	if o.iterX < x {
+		o.iterX++
+	} else if o.iterX > x {
+		o.iterX--
+	}
+	if o.iterY < y {
+		o.iterY++
+	} else if o.iterY > y {
+		o.iterY--
+	}
+
 	if o.color != nil {
 		opts.ColorM.ScaleWithColor(*o.color)
 	}
-	opts.GeoM.Translate(x, y)
+	opts.GeoM.Translate(o.iterX, o.iterY)
 	opts.GeoM.Concat(screenOpts.GeoM)
 	screen.DrawImage(o.image, opts)
 }
@@ -48,7 +63,7 @@ func (o *Object) GoTo(x, y int) bool {
 		if ty > y {
 			ty--
 		}
-		if other := o.game.checkCollision(o, tx, ty); other != nil {
+		if other := o.game.checkCollision(o, tx, ty, ""); other != nil {
 			done <- false
 			return true
 		}
@@ -70,15 +85,15 @@ func (o *Object) GoTo(x, y int) bool {
 func (o *Object) Step(x, y int) bool {
 	done := make(chan bool)
 	o.game.submit(func() bool {
-		o.step(x, y)
+		o.step(x, y, "")
 		done <- true
 		return true
 	})
 	return <-done
 }
 
-func (o *Object) step(x, y int) *Object {
-	if other := o.game.checkCollision(o, o.x+x, o.y+y); other != nil {
+func (o *Object) step(x, y int, act string) *Object {
+	if other := o.game.checkCollision(o, o.x+x, o.y+y, act); other != nil {
 		return other
 	}
 	o.x += x
@@ -108,7 +123,7 @@ func (o *Object) WalkTo(o2 *Object) bool {
 			y--
 		}
 
-		if other := o.game.checkCollision(o, x, y); other != nil {
+		if other := o.game.checkCollision(o, x, y, ""); other != nil {
 			done <- false
 			return true
 		}

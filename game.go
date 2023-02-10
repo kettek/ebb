@@ -85,17 +85,22 @@ func (g *Game) Update() error {
 	if !g.lockedInput {
 		// TODO
 		if pl := g.getObject("player"); pl != nil {
+			act := ""
+			if ebiten.IsKeyPressed(ebiten.KeyShift) {
+				act = "interact"
+			}
+
 			if inpututil.IsKeyJustPressed(ebiten.KeyA) {
-				pl.step(-1, 0)
+				pl.step(-1, 0, act)
 			}
 			if inpututil.IsKeyJustPressed(ebiten.KeyD) {
-				pl.step(1, 0)
+				pl.step(1, 0, act)
 			}
 			if inpututil.IsKeyJustPressed(ebiten.KeyW) {
-				pl.step(0, -1)
+				pl.step(0, -1, act)
 			}
 			if inpututil.IsKeyJustPressed(ebiten.KeyS) {
-				pl.step(0, 1)
+				pl.step(0, 1, act)
 			}
 		}
 	}
@@ -106,8 +111,8 @@ func (g *Game) Update() error {
 func (g *Game) Draw(screen *ebiten.Image) {
 	opts := &ebiten.DrawImageOptions{}
 	if g.target != nil {
-		x := float64(g.target.x * g.target.image.Bounds().Dx())
-		y := float64(g.target.y * g.target.image.Bounds().Dy())
+		x := g.target.iterX
+		y := g.target.iterY
 		x -= float64(screen.Bounds().Dx() / 2)
 		y -= float64(screen.Bounds().Dy() / 2)
 		opts.GeoM.Translate(float64(-x), float64(-y))
@@ -204,6 +209,8 @@ func (g *Game) PlaceObject(o *Object, x, y int) *Object {
 		o.game = g
 		o.x = x
 		o.y = y
+		o.iterX = float64(o.x * o.image.Bounds().Dx())
+		o.iterY = float64(o.y * o.image.Bounds().Dy())
 		g.objects = append(g.objects, o)
 		done <- true
 		return true
@@ -212,10 +219,17 @@ func (g *Game) PlaceObject(o *Object, x, y int) *Object {
 	return o
 }
 
-func (g *Game) checkCollision(o *Object, x, y int) (touch *Object) {
+func (g *Game) checkCollision(o *Object, x, y int, act string) (touch *Object) {
 	for _, o2 := range g.objects {
-		if o2.x == x && o2.y == y && !o2.noblock {
-			return o2
+		if o2.x == x && o2.y == y {
+			blocked := !o2.noblock
+			if o2.touch != nil {
+				blocked = o2.touch(o2, o, act)
+			}
+			o.lastTouched = o2
+			if blocked {
+				return o2
+			}
 		}
 	}
 	return nil

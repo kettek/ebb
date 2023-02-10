@@ -52,6 +52,27 @@ var GlobalThings = ThingCreatorFuncs{
 			tag:   "east door",
 			image: g.loadImage("door"),
 			color: &color.RGBA{R: 145, G: 22, B: 22, A: 255},
+			touch: func(o *Object, toucher *Object, act string) (blocked bool) {
+				if act == "interact" {
+					o.noblock = !o.noblock
+					if o.noblock {
+						o.image = g.loadImage("door-open")
+					} else {
+						o.image = g.loadImage("door")
+						go o.Say("*click*")
+					}
+					return true
+				}
+				if toucher.lastTouched != o && !o.noblock {
+					go o.Say("*thump*")
+				} else if toucher.lastTouched == o && !o.noblock {
+					o.image = g.loadImage("door-open")
+					o.noblock = true
+					return true
+				}
+
+				return !o.noblock
+			},
 		}
 	},
 	'E': func(g *Game) *Object {
