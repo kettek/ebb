@@ -3,7 +3,6 @@ package main
 import (
 	"embed"
 	"fmt"
-	"image/color"
 	"io/fs"
 	"log"
 	"os"
@@ -11,8 +10,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/kettek/go-multipath/v2"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
@@ -26,12 +23,9 @@ var (
 
 type Game struct {
 	fs          multipath.FS
-	cochan      chan func() bool
-	routines    []func() bool
-	objects     []*Object
-	target      *Object
 	images      map[string]*ebiten.Image
-	lockedInput bool
+	areas       map[string]*Area
+	currentArea *Area
 }
 
 func (g *Game) Init() {
@@ -62,233 +56,29 @@ func (g *Game) Init() {
 		log.Fatal(err)
 	}
 
-	g.loadMap(Maps[0])
+	g.areas["start"] = g.loadMap(Maps["start"])
+	g.currentArea = g.areas["start"]
 }
 
 func (g *Game) Update() error {
-	for done := false; !done; {
-		select {
-		case routine := <-g.cochan:
-			g.routines = append(g.routines, routine)
-		default:
-			done = true
+	if g.currentArea != nil {
+		if err := g.currentArea.Update(); err != nil {
+			panic(err)
 		}
 	}
-	routines := g.routines[:0]
-	for _, r := range g.routines {
-		if !r() {
-			routines = append(routines, r)
-		}
-	}
-	g.routines = routines
-
-	if !g.lockedInput {
-		// TODO
-		if pl := g.getObject("player"); pl != nil {
-			act := ""
-			if ebiten.IsKeyPressed(ebiten.KeyShift) {
-				act = "interact"
-			}
-
-			if inpututil.IsKeyJustPressed(ebiten.KeyA) {
-				pl.step(-1, 0, act)
-			}
-			if inpututil.IsKeyJustPressed(ebiten.KeyD) {
-				pl.step(1, 0, act)
-			}
-			if inpututil.IsKeyJustPressed(ebiten.KeyW) {
-				pl.step(0, -1, act)
-			}
-			if inpututil.IsKeyJustPressed(ebiten.KeyS) {
-				pl.step(0, 1, act)
-			}
-		}
-	}
-
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	opts := &ebiten.DrawImageOptions{}
-	if g.target != nil {
-		x := g.target.iterX
-		y := g.target.iterY
-		x -= float64(screen.Bounds().Dx() / 2)
-		y -= float64(screen.Bounds().Dy() / 2)
-		opts.GeoM.Translate(float64(-x), float64(-y))
+	if g.currentArea != nil {
+		g.currentArea.Draw(screen)
 	}
-	for _, o := range g.objects {
-		o.Draw(screen, opts)
-	}
-
-	for _, o := range g.objects {
-		if o.saying != "" {
-			bounds := text.BoundString(gameFont, o.saying)
-			x := float64(o.x*o.image.Bounds().Dx()) - float64(bounds.Dx()/2)
-			y := float64(o.y * o.image.Bounds().Dy())
-			x += opts.GeoM.Element(0, 2)
-			y += opts.GeoM.Element(1, 2)
-			for i := -1; i < 2; i += 2 {
-				text.Draw(screen, o.saying, gameFont, int(x)+i, int(y), color.Black)
-				for j := -1; j < 2; j += 2 {
-					text.Draw(screen, o.saying, gameFont, int(x)+i, int(y)+j, color.Black)
-					text.Draw(screen, o.saying, gameFont, int(x)+i, int(y), color.Black)
-				}
-			}
-			text.Draw(screen, o.saying, gameFont, int(x), int(y), o.color)
-		}
-	}
-
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("%f", ebiten.ActualTPS()))
 	return
 }
 
 func (g *Game) Layout(w, h int) (int, int) {
 	return w / 2, h / 2
-}
-
-func (g *Game) submit(fnc func() bool) {
-	select {
-	case g.cochan <- fnc:
-	default:
-	}
-}
-
-func (g *Game) Delay(amount int) bool {
-	ticks := 0
-	done := make(chan bool)
-	g.submit(func() bool {
-		ticks++
-		if ticks >= amount {
-			done <- true
-			return true
-		}
-		return false
-	})
-	return <-done
-}
-
-func (g *Game) NewObject(tag string, image string, color *color.RGBA) *Object {
-	done := make(chan *Object)
-	g.submit(func() bool {
-		o := &Object{
-			x:     -1,
-			y:     -1,
-			game:  g,
-			tag:   tag,
-			image: g.loadImage(image),
-			color: color,
-		}
-		done <- o
-		return true
-	})
-	return <-done
-}
-
-func (g *Game) getObject(tag string) *Object {
-	for _, o := range g.objects {
-		if o.tag == tag {
-			return o
-		}
-	}
-	return nil
-}
-
-func (g *Game) GetObject(tag string) *Object {
-	done := make(chan *Object)
-	g.submit(func() bool {
-		done <- g.getObject(tag)
-		return true
-	})
-	return <-done
-}
-
-func (g *Game) PlaceObject(o *Object, x, y int) *Object {
-	done := make(chan bool)
-	g.submit(func() bool {
-		o.game = g
-		o.x = x
-		o.y = y
-		o.iterX = float64(o.x * o.image.Bounds().Dx())
-		o.iterY = float64(o.y * o.image.Bounds().Dy())
-		g.objects = append(g.objects, o)
-		done <- true
-		return true
-	})
-	<-done
-	return o
-}
-
-func (g *Game) checkCollision(o *Object, x, y int, act string) (touch *Object) {
-	for _, o2 := range g.objects {
-		if o2.x == x && o2.y == y {
-			blocked := !o2.noblock
-			if o2.touch != nil {
-				blocked = o2.touch(o2, o, act)
-			}
-			o.lastTouched = o2
-			if blocked {
-				return o2
-			}
-		}
-	}
-	return nil
-}
-
-func (g *Game) FollowObject(o *Object) {
-	done := make(chan bool)
-	g.submit(func() bool {
-		o.game = g
-		g.target = o
-		done <- true
-		return true
-	})
-	<-done
-}
-
-func (g *Game) Exec(fnc func()) {
-	done := make(chan bool)
-	select {
-	case g.cochan <- func() bool {
-		fnc()
-		done <- true
-		return true
-	}:
-	default:
-	}
-	<-done
-}
-
-func (g *Game) Freeze() {
-	done := make(chan bool)
-	g.submit(func() bool {
-		g.lockedInput = true
-		done <- true
-		return true
-	})
-	<-done
-}
-
-func (g *Game) Thaw() {
-	done := make(chan bool)
-	g.submit(func() bool {
-		g.lockedInput = false
-		done <- true
-		return true
-	})
-	<-done
-}
-
-func (g *Game) Scene(fnc func()) {
-	done := make(chan bool)
-	g.submit(func() bool {
-		g.lockedInput = true
-		fnc()
-		g.lockedInput = false
-		done <- true
-		return false
-	})
-	<-done
 }
 
 func (g *Game) loadImage(s string) *ebiten.Image {
@@ -304,9 +94,11 @@ func (g *Game) loadImage(s string) *ebiten.Image {
 }
 
 // Maps
-func (g *Game) loadMap(m *Map) {
-	//lm := LiveMap{}
-	g.objects = make([]*Object, 0)
+func (g *Game) loadMap(m *Map) *Area {
+	area := &Area{
+		game:   g,
+		cochan: make(chan func() bool, 10),
+	}
 
 	if !m.created {
 		lines := strings.Split(m.tiles, "\n")[1:]
@@ -319,12 +111,10 @@ func (g *Game) loadMap(m *Map) {
 				if ok {
 					obj := ctor(g)
 					if obj != nil {
-						obj.game = g
+						obj.area = area
 						obj.x = x
 						obj.y = y
-						g.objects = append(g.objects, obj)
-						//lm.EnsureSize(y, x)
-						//lm.PlaceObject(obj, x, y)
+						area.objects = append(area.objects, obj)
 					}
 				}
 			}
@@ -332,13 +122,14 @@ func (g *Game) loadMap(m *Map) {
 
 		if m.load != nil {
 			go func() {
-				g.Freeze()
-				m.load(g)
-				g.Thaw()
+				area.Freeze()
+				m.load(g, area)
+				area.Thaw()
 			}()
 		}
 		m.created = true
 	} else {
 		// ???
 	}
+	return area
 }

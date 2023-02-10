@@ -10,8 +10,8 @@ type ThingCreatorFuncs map[rune]ThingCreatorFunc
 
 type Map struct {
 	title   string
-	load    func(g *Game)
-	loaded  func(g *Game)
+	load    func(g *Game, a *Area)
+	loaded  func(g *Game, a *Area)
 	tiles   string
 	things  ThingCreatorFuncs
 	created bool
@@ -129,8 +129,8 @@ var GlobalThings = ThingCreatorFuncs{
 	},
 }
 
-var Maps = map[int]*Map{
-	0: {
+var Maps = map[string]*Map{
+	"start": {
 		title: "a start",
 		tiles: `
    ##########**
@@ -156,39 +156,39 @@ var Maps = map[int]*Map{
 				}
 			},
 		},
-		load: func(g *Game) {
-			npc := g.GetObject("npc")
-			player := g.GetObject("player")
-			door := g.GetObject("east door")
-			g.FollowObject(player)
-			g.Delay(60)
+		load: func(g *Game, a *Area) {
+			npc := a.GetObject("npc")
+			player := a.GetObject("player")
+			door := a.GetObject("east door")
+			a.FollowObject(player)
+			a.Delay(60)
 			npc.Say("hey, come here!")
 			player.WalkTo(npc)
-			g.Delay(20)
+			a.Delay(20)
 			npc.Say("have you heard of the high elves?")
 			player.Say("no")
 			npc.Say("me neither")
-			npc2 := g.NewObject("npc 2", "character", &color.RGBA{R: 255, G: 0, B: 255, A: 255})
+			npc2 := a.NewObject("npc 2", "character", &color.RGBA{R: 255, G: 0, B: 255, A: 255})
 			door.SetImage("door-open")
 			door.SetBlocking(false)
-			g.PlaceObject(npc2, door.x, door.y)
-			g.FollowObject(npc2)
+			a.PlaceObject(npc2, door.x, door.y)
+			a.FollowObject(npc2)
 			door.Say("*bang*")
-			g.Delay(30)
+			a.Delay(30)
 			npc2.Step(-1, 0)
-			g.Delay(30)
+			a.Delay(30)
 			door.SetImage("door")
 			door.SetBlocking(true)
-			g.Delay(30)
+			a.Delay(30)
 			npc2.Say("...greetings")
-			g.Delay(10)
+			a.Delay(10)
 			npc2.WalkTo(npc)
-			g.Delay(20)
+			a.Delay(20)
 			npc2.Say("I have heard of the high elves")
 			//
-			g.FollowObject(player)
-			g.Thaw()
-			g.Delay(300)
+			a.FollowObject(player)
+			a.Thaw()
+			a.Delay(300)
 			npc.Say("They're a devious bunch")
 			npc2.Say("You don't know the half of it")
 		},

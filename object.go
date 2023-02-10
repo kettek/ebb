@@ -8,7 +8,7 @@ import (
 )
 
 type Object struct {
-	game *Game
+	area *Area
 	//
 	title        string
 	tag          string
@@ -63,7 +63,7 @@ func (o *Object) GoTo(x, y int) bool {
 		if ty > y {
 			ty--
 		}
-		if other := o.game.checkCollision(o, tx, ty, ""); other != nil {
+		if other := o.area.checkCollision(o, tx, ty, ""); other != nil {
 			done <- false
 			return true
 		}
@@ -76,7 +76,7 @@ func (o *Object) GoTo(x, y int) bool {
 		return false
 	}
 	select {
-	case o.game.cochan <- fnc:
+	case o.area.cochan <- fnc:
 	default:
 	}
 	return <-done
@@ -84,7 +84,7 @@ func (o *Object) GoTo(x, y int) bool {
 
 func (o *Object) Step(x, y int) bool {
 	done := make(chan bool)
-	o.game.submit(func() bool {
+	o.area.submit(func() bool {
 		o.step(x, y, "")
 		done <- true
 		return true
@@ -93,7 +93,7 @@ func (o *Object) Step(x, y int) bool {
 }
 
 func (o *Object) step(x, y int, act string) *Object {
-	if other := o.game.checkCollision(o, o.x+x, o.y+y, act); other != nil {
+	if other := o.area.checkCollision(o, o.x+x, o.y+y, act); other != nil {
 		return other
 	}
 	o.x += x
@@ -104,7 +104,7 @@ func (o *Object) step(x, y int, act string) *Object {
 func (o *Object) WalkTo(o2 *Object) bool {
 	done := make(chan bool)
 	steps := 0
-	o.game.submit(func() bool {
+	o.area.submit(func() bool {
 		steps++
 		if steps < 30 {
 			return false
@@ -123,7 +123,7 @@ func (o *Object) WalkTo(o2 *Object) bool {
 			y--
 		}
 
-		if other := o.game.checkCollision(o, x, y, ""); other != nil {
+		if other := o.area.checkCollision(o, x, y, ""); other != nil {
 			done <- false
 			return true
 		}
@@ -143,7 +143,7 @@ func (o *Object) Say(s string) {
 	done := make(chan bool)
 	first := true
 	ticks := 0
-	o.game.submit(func() bool {
+	o.area.submit(func() bool {
 		if first {
 			o.saying = s
 			first = false
@@ -161,8 +161,8 @@ func (o *Object) Say(s string) {
 
 func (o *Object) SetImage(s string) {
 	done := make(chan bool)
-	o.game.submit(func() bool {
-		o.image = o.game.loadImage(s)
+	o.area.submit(func() bool {
+		o.image = o.area.game.loadImage(s)
 		done <- true
 		return true
 	})
@@ -171,7 +171,7 @@ func (o *Object) SetImage(s string) {
 
 func (o *Object) SetBlocking(b bool) {
 	done := make(chan bool)
-	o.game.submit(func() bool {
+	o.area.submit(func() bool {
 		o.noblock = !b
 		done <- true
 		return true

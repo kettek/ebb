@@ -7,7 +7,7 @@ import (
 func main() {
 	game := &Game{
 		images: make(map[string]*ebiten.Image),
-		cochan: make(chan func() bool, 10),
+		areas:  make(map[string]*Area),
 	}
 	game.Init()
 
