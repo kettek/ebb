@@ -2,6 +2,7 @@ package main
 
 import (
 	"image/color"
+	"sort"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -60,6 +61,12 @@ func (a *Area) Update() error {
 	}
 
 	return nil
+}
+
+func (a *Area) sortObjects() {
+	sort.SliceStable(a.objects, func(i, j int) bool {
+		return a.objects[i].z < a.objects[j].z
+	})
 }
 
 func (a *Area) Draw(screen *ebiten.Image) {
@@ -181,6 +188,7 @@ func (a *Area) PlaceObject(o *Object, x, y int) *Object {
 		o.iterX = float64(o.x * o.image.Bounds().Dx())
 		o.iterY = float64(o.y * o.image.Bounds().Dy())
 		a.objects = append(a.objects, o)
+		a.sortObjects()
 		done <- true
 		return true
 	})
