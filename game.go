@@ -157,6 +157,12 @@ func (g *Game) ActivateArea(a *Area) {
 	done := make(chan *Area)
 	select {
 	case g.cochan <- func() bool {
+		for _, a2 := range g.activeAreas {
+			if a2 == a {
+				done <- a
+				return true
+			}
+		}
 		g.activeAreas = append(g.activeAreas, a)
 		done <- a
 		return true
@@ -228,7 +234,7 @@ func (g *Game) loadArea(s string, o *Object) *Area {
 		if prev != nil && prev.mappe.leave != nil {
 			prev.mappe.leave(prev, area, triggering)
 		}
-		//go g.DeactivateArea(prev)
+		go g.DeactivateArea(prev)
 		if prev != nil && triggering != nil {
 			prev.traveledObjects[triggering.tag] = [2]int{triggering.x, triggering.y}
 		}
