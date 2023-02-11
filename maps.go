@@ -180,6 +180,7 @@ func init() {
 			}
 			triggering = player
 			if first {
+				a.game.ControlObject(player)
 				npc := a.GetObject("npc")
 				door := a.GetObject("east door")
 				a.FollowObject(player)

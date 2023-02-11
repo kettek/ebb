@@ -10,6 +10,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/kettek/go-multipath/v2"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
@@ -22,12 +23,14 @@ var (
 )
 
 type Game struct {
-	fs          multipath.FS
-	images      map[string]*ebiten.Image
-	areas       map[string]*Area
-	currentArea *Area
-	cochan      chan func() bool
-	routines    []func() bool
+	fs               multipath.FS
+	images           map[string]*ebiten.Image
+	areas            map[string]*Area
+	currentArea      *Area
+	activeAreas      []*Area
+	controlledObject *Object
+	cochan           chan func() bool
+	routines         []func() bool
 }
 
 func (g *Game) Init() {
@@ -80,11 +83,37 @@ func (g *Game) Update() error {
 	}
 	g.routines = routines
 
-	if g.currentArea != nil {
-		if err := g.currentArea.Update(); err != nil {
+	for _, a := range g.activeAreas {
+		if err := a.Update(); err != nil {
 			panic(err)
 		}
 	}
+	// FIXME: We need to tie the concept of input to a specific object and directly interface with it regardless of current area.
+	if g.controlledObject != nil && g.controlledObject.area != nil {
+		a := g.controlledObject.area
+		if !a.lockedInput {
+			// TODO
+			pl := g.controlledObject
+			act := ""
+			if ebiten.IsKeyPressed(ebiten.KeyShift) {
+				act = "interact"
+			}
+
+			if inpututil.IsKeyJustPressed(ebiten.KeyA) {
+				pl.step(-1, 0, act)
+			}
+			if inpututil.IsKeyJustPressed(ebiten.KeyD) {
+				pl.step(1, 0, act)
+			}
+			if inpututil.IsKeyJustPressed(ebiten.KeyW) {
+				pl.step(0, -1, act)
+			}
+			if inpututil.IsKeyJustPressed(ebiten.KeyS) {
+				pl.step(0, 1, act)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -122,6 +151,37 @@ func (g *Game) LoadArea(s string, o *Object) *Area {
 	default:
 	}
 	return <-done
+}
+
+func (g *Game) ActivateArea(a *Area) {
+	done := make(chan *Area)
+	select {
+	case g.cochan <- func() bool {
+		g.activeAreas = append(g.activeAreas, a)
+		done <- a
+		return true
+	}:
+	default:
+	}
+	<-done
+}
+
+func (g *Game) DeactivateArea(a *Area) {
+	done := make(chan *Area)
+	select {
+	case g.cochan <- func() bool {
+		for i, a2 := range g.activeAreas {
+			if a2 == a {
+				g.activeAreas = append(g.activeAreas[:i], g.activeAreas[i+1:]...)
+				break
+			}
+		}
+		done <- a
+		return true
+	}:
+	default:
+	}
+	<-done
 }
 
 func (g *Game) loadArea(s string, o *Object) *Area {
@@ -168,9 +228,11 @@ func (g *Game) loadArea(s string, o *Object) *Area {
 		if prev != nil && prev.mappe.leave != nil {
 			prev.mappe.leave(prev, area, triggering)
 		}
+		//go g.DeactivateArea(prev)
 		if prev != nil && triggering != nil {
 			prev.traveledObjects[triggering.tag] = [2]int{triggering.x, triggering.y}
 		}
+		go g.ActivateArea(area)
 		if area.mappe.enter != nil {
 			area.mappe.enter(area, prev, triggering, first)
 		}
@@ -179,7 +241,21 @@ func (g *Game) loadArea(s string, o *Object) *Area {
 
 	area.created = true
 	g.areas[s] = area
+
 	g.currentArea = area
 
 	return area
+}
+
+func (g *Game) ControlObject(o *Object) {
+	done := make(chan bool)
+	select {
+	case g.cochan <- func() bool {
+		g.controlledObject = o
+		done <- true
+		return true
+	}:
+	default:
+	}
+	<-done
 }

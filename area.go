@@ -5,7 +5,6 @@ import (
 	"sort"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 )
 
@@ -37,29 +36,6 @@ func (a *Area) Update() error {
 		}
 	}
 	a.routines = routines
-
-	if !a.lockedInput {
-		// TODO
-		if pl := a.getObject("player"); pl != nil {
-			act := ""
-			if ebiten.IsKeyPressed(ebiten.KeyShift) {
-				act = "interact"
-			}
-
-			if inpututil.IsKeyJustPressed(ebiten.KeyA) {
-				pl.step(-1, 0, act)
-			}
-			if inpututil.IsKeyJustPressed(ebiten.KeyD) {
-				pl.step(1, 0, act)
-			}
-			if inpututil.IsKeyJustPressed(ebiten.KeyW) {
-				pl.step(0, -1, act)
-			}
-			if inpututil.IsKeyJustPressed(ebiten.KeyS) {
-				pl.step(0, 1, act)
-			}
-		}
-	}
 
 	return nil
 }
