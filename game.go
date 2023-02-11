@@ -128,8 +128,9 @@ func (g *Game) loadArea(s string, o *Object) *Area {
 	area := g.areas[s]
 	if area == nil {
 		area = &Area{
-			game:   g,
-			cochan: make(chan func() bool, 10),
+			game:            g,
+			cochan:          make(chan func() bool, 10),
+			traveledObjects: make(map[string][2]int),
 		}
 	}
 
@@ -166,6 +167,9 @@ func (g *Game) loadArea(s string, o *Object) *Area {
 	go func(area *Area, prev *Area, first bool, triggering *Object) {
 		if prev != nil && prev.mappe.leave != nil {
 			prev.mappe.leave(prev, area, triggering)
+		}
+		if prev != nil && triggering != nil {
+			prev.traveledObjects[triggering.tag] = [2]int{triggering.x, triggering.y}
 		}
 		if area.mappe.enter != nil {
 			area.mappe.enter(area, prev, triggering, first)

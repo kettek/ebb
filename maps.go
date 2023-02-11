@@ -178,6 +178,7 @@ func init() {
 			if player == nil {
 				player = a.GetObject("player")
 			}
+			triggering = player
 			if first {
 				npc := a.GetObject("npc")
 				door := a.GetObject("east door")
@@ -215,11 +216,16 @@ func init() {
 				npc.Say("They're a devious bunch")
 				npc2.Say("You don't know the half of it")
 			} else {
-				door := a.GetObject("east exit")
+				x, y, ok := a.PreviousObjectPosition(triggering.tag)
+				if !ok {
+					door := a.GetObject("east exit")
+					x = door.x - 1
+					y = door.y
+				}
 				a.Exec(func() {
-					prev.removeObject(player)
+					prev.removeObject(triggering)
 				})
-				a.PlaceObject(player, door.x-1, door.y)
+				a.PlaceObject(triggering, x, y)
 			}
 		},
 	}
@@ -281,13 +287,16 @@ func init() {
 			},
 		},
 		enter: func(a *Area, prev *Area, triggering *Object, first bool) {
-			player := triggering
-			a.FollowObject(player)
-			door := a.GetObject("west exit")
+			x, y, ok := a.PreviousObjectPosition(triggering.tag)
+			if !ok {
+				door := a.GetObject("west exit")
+				x = door.x + 1
+				y = door.y
+			}
 			a.Exec(func() {
-				prev.removeObject(player)
+				prev.removeObject(triggering)
 			})
-			a.PlaceObject(player, door.x+1, door.y)
+			a.PlaceObject(triggering, x, y)
 		},
 	}
 	Maps["pool"] = &Map{

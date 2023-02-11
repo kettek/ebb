@@ -10,14 +10,15 @@ import (
 )
 
 type Area struct {
-	game        *Game
-	mappe       *Map
-	cochan      chan func() bool
-	routines    []func() bool
-	objects     []*Object
-	target      *Object
-	created     bool
-	lockedInput bool
+	game            *Game
+	mappe           *Map
+	cochan          chan func() bool
+	routines        []func() bool
+	objects         []*Object
+	traveledObjects map[string][2]int
+	target          *Object
+	created         bool
+	lockedInput     bool
 }
 
 func (a *Area) Update() error {
@@ -269,4 +270,9 @@ func (a *Area) Scene(fnc func()) {
 
 func (a *Area) Travel(s string, o *Object) {
 	a.game.LoadArea(s, o)
+}
+
+func (a *Area) PreviousObjectPosition(s string) (x, y int, ok bool) {
+	xy, ok := a.traveledObjects[s]
+	return xy[0], xy[1], ok
 }
