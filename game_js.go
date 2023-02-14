@@ -5,9 +5,8 @@ import (
 )
 
 func (g *Game) SystemInit() {
-	hash := js.Global().Get("location").Get("hash")
-	if !hash.IsUndefined() {
-		m := hash.String()[1:]
-		g.defaultMap = m
+	hash := js.Global().Get("location").Get("hash").String()
+	if hash != "" {
+		g.defaultMap = hash[1:]
 	}
 }
