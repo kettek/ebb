@@ -2,6 +2,7 @@ package main
 
 import (
 	"image/color"
+	"math"
 	"math/rand"
 )
 
@@ -356,5 +357,85 @@ func init() {
 			a.PlaceObject(player, door.x-1, door.y)
 		},
 	}
+	Maps["klb"] = &Map{
+		title: "klb",
+		tiles: `
+      ####    ####
+     #    #  #    #
+    #  k   ##  b   #
+    #              #
+     #            #
+      #          #
+       #   p    #
+        #      #
+         #    #
+          #  #
+           ##
+`,
+		things: ThingCreatorFuncs{
+			'#': func(g *Game) *Object {
+				return &Object{
+					image: g.loadImage("heart"),
+					color: &color.RGBA{R: 255, G: 105, B: 180, A: 255},
+				}
+			},
+			'k': func(g *Game) *Object {
+				return &Object{
+					tag:    "kit",
+					image:  g.loadImage("kit"),
+					mirror: true,
+					color:  &color.RGBA{R: 204, G: 85, B: 0, A: 255},
+				}
+			},
+			'b': func(g *Game) *Object {
+				return &Object{
+					tag:   "birb",
+					image: g.loadImage("birb"),
+					color: &color.RGBA{R: 249, G: 246, B: 238, A: 255},
+				}
+			},
+			'p': func(g *Game) *Object {
+				return &Object{
+					tag:     "point",
+					image:   g.loadImage("empty"),
+					noblock: true,
+				}
+			},
+		},
+		enter: func(a *Area, prev *Area, triggering *Object, first bool) {
+			point := a.GetObject("point")
+			a.FollowObject(point)
+			a.Delay(60)
+			birb := a.GetObject("birb")
+			kit := a.GetObject("kit")
+			birb.WalkTo(point)
+			kit.WalkTo(point)
+			kit.Step(1, 0)
+			a.Delay(60)
+			kit.Say("*kees*")
+			o2 := a.NewObject("heart", "sprouts", &color.RGBA{R: 255, G: 0, B: 0, A: 255})
+			a.PlaceObject(o2, kit.x, kit.y-1)
+			a.Delay(60)
+			birb.Say("*smoch*")
+			o3 := a.NewObject("heart", "sprouts", &color.RGBA{R: 255, G: 0, B: 0, A: 255})
+			a.PlaceObject(o3, birb.x, birb.y-1)
+			a.Delay(30)
 
+			t := 0.0
+			r := 0.0
+			for i := 0; i < 200; i++ {
+				x := r * math.Cos(t)
+				y := r * math.Sin(t)
+				c := &color.RGBA{R: 255, G: 0, B: 0, A: 255}
+				if i%2 == 0 {
+					c.G = 255
+					c.B = 255
+				}
+				o := a.NewObject("heart", "heart", c)
+				a.PlaceObject(o, point.x+int(x), point.y+int(y))
+				t += 0.3
+				r += 0.3
+			}
+		},
+	}
 }
