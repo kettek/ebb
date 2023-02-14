@@ -18,6 +18,8 @@ type Object struct {
 	saying       string
 	image        *ebiten.Image
 	noblock      bool
+	mirror       bool
+	flip         bool
 	color        *color.RGBA
 	touch        func(o *Object, toucher *Object, act string) (shouldBlock bool)
 	lastTouched  *Object
@@ -25,6 +27,9 @@ type Object struct {
 
 func (o *Object) Draw(screen *ebiten.Image, screenOpts *ebiten.DrawImageOptions) {
 	opts := &ebiten.DrawImageOptions{}
+	if o.image == nil {
+		return
+	}
 	x := float64(o.x * o.image.Bounds().Dx())
 	y := float64(o.y * o.image.Bounds().Dy())
 
@@ -42,8 +47,20 @@ func (o *Object) Draw(screen *ebiten.Image, screenOpts *ebiten.DrawImageOptions)
 	if o.color != nil {
 		opts.ColorM.ScaleWithColor(*o.color)
 	}
+
+	if o.flip {
+		opts.GeoM.Scale(1, -1)
+		opts.GeoM.Translate(0, float64(o.image.Bounds().Dy()))
+	}
+
+	if o.mirror {
+		opts.GeoM.Scale(-1, 1)
+		opts.GeoM.Translate(float64(o.image.Bounds().Dx()), 0)
+	}
+
 	opts.GeoM.Translate(o.iterX, o.iterY)
 	opts.GeoM.Concat(screenOpts.GeoM)
+
 	screen.DrawImage(o.image, opts)
 }
 
