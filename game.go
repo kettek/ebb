@@ -31,6 +31,7 @@ type Game struct {
 	controlledObject *Object
 	cochan           chan func() bool
 	routines         []func() bool
+	defaultMap       string
 }
 
 func (g *Game) Init() {
@@ -63,7 +64,13 @@ func (g *Game) Init() {
 		log.Fatal(err)
 	}
 
-	g.loadArea("start", nil)
+	g.SystemInit()
+
+	if _, ok := Maps[g.defaultMap]; !ok {
+		g.defaultMap = "start"
+	}
+
+	g.loadArea(g.defaultMap, nil)
 }
 
 func (g *Game) Update() error {
