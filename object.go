@@ -10,18 +10,19 @@ import (
 type Object struct {
 	area *Area
 	//
-	title        string
-	tag          string
+	Title        string
+	Tag          string
+	Image        string
+	NoBlock      bool
+	Mirror       bool
+	Flip         bool
+	Color        *color.RGBA
+	Touch        func(o *Object, toucher *Object, act string) (shouldBlock bool)
+	Z            int
 	x, y         int
-	z            int
 	iterX, iterY float64
 	saying       string
 	image        *ebiten.Image
-	noblock      bool
-	mirror       bool
-	flip         bool
-	color        *color.RGBA
-	touch        func(o *Object, toucher *Object, act string) (shouldBlock bool)
 	lastTouched  *Object
 }
 
@@ -44,16 +45,16 @@ func (o *Object) Draw(screen *ebiten.Image, screenOpts *ebiten.DrawImageOptions)
 		o.iterY--
 	}
 
-	if o.color != nil {
-		opts.ColorM.ScaleWithColor(*o.color)
+	if o.Color != nil {
+		opts.ColorM.ScaleWithColor(*o.Color)
 	}
 
-	if o.flip {
+	if o.Flip {
 		opts.GeoM.Scale(1, -1)
 		opts.GeoM.Translate(0, float64(o.image.Bounds().Dy()))
 	}
 
-	if o.mirror {
+	if o.Mirror {
 		opts.GeoM.Scale(-1, 1)
 		opts.GeoM.Translate(float64(o.image.Bounds().Dx()), 0)
 	}
@@ -190,7 +191,7 @@ func (o *Object) SetImage(s string) {
 func (o *Object) SetBlocking(b bool) {
 	done := make(chan bool)
 	o.area.submit(func() bool {
-		o.noblock = !b
+		o.NoBlock = !b
 		done <- true
 		return true
 	})

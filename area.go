@@ -42,7 +42,7 @@ func (a *Area) Update() error {
 
 func (a *Area) sortObjects() {
 	sort.SliceStable(a.objects, func(i, j int) bool {
-		return a.objects[i].z < a.objects[j].z
+		return a.objects[i].Z < a.objects[j].Z
 	})
 }
 
@@ -73,7 +73,7 @@ func (a *Area) Draw(screen *ebiten.Image) {
 					text.Draw(screen, o.saying, gameFont, int(x)+i, int(y), color.Black)
 				}
 			}
-			text.Draw(screen, o.saying, gameFont, int(x), int(y), o.color)
+			text.Draw(screen, o.saying, gameFont, int(x), int(y), o.Color)
 		}
 	}
 
@@ -108,9 +108,10 @@ func (a *Area) NewObject(tag string, image string, color *color.RGBA) *Object {
 			x:     -1,
 			y:     -1,
 			area:  a,
-			tag:   tag,
+			Tag:   tag,
+			Image: image,
 			image: a.game.loadImage(image),
-			color: color,
+			Color: color,
 		}
 		done <- o
 		return true
@@ -120,7 +121,7 @@ func (a *Area) NewObject(tag string, image string, color *color.RGBA) *Object {
 
 func (a *Area) getObject(tag string) *Object {
 	for _, o := range a.objects {
-		if o.tag == tag {
+		if o.Tag == tag {
 			return o
 		}
 	}
@@ -162,6 +163,7 @@ func (a *Area) PlaceObject(o *Object, x, y int) *Object {
 		o.area = a
 		o.x = x
 		o.y = y
+		o.image = a.game.loadImage(o.Image)
 		o.iterX = float64(o.x * o.image.Bounds().Dx())
 		o.iterY = float64(o.y * o.image.Bounds().Dy())
 		a.objects = append(a.objects, o)
@@ -176,9 +178,9 @@ func (a *Area) PlaceObject(o *Object, x, y int) *Object {
 func (a *Area) checkCollision(o *Object, x, y int, act string) (touch *Object) {
 	for _, o2 := range a.objects {
 		if o2.x == x && o2.y == y {
-			blocked := !o2.noblock
-			if o2.touch != nil {
-				blocked = o2.touch(o2, o, act)
+			blocked := !o2.NoBlock
+			if o2.Touch != nil {
+				blocked = o2.Touch(o2, o, act)
 			}
 			o.lastTouched = o2
 			if blocked {

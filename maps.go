@@ -22,61 +22,61 @@ type Map struct {
 var GlobalThings = ThingCreatorFuncs{
 	'@': func(g *Game) *Object {
 		return &Object{
-			tag:   "player",
-			image: g.loadImage("character"),
-			color: &color.RGBA{R: 255, G: 255, B: 0, A: 255},
-			z:     1,
+			Tag:   "player",
+			Image: "character",
+			Color: &color.RGBA{R: 255, G: 255, B: 0, A: 255},
+			Z:     1,
 		}
 	},
 	'#': func(g *Game) *Object {
 		return &Object{
-			image: g.loadImage("woodwall"),
-			color: &color.RGBA{R: 165, G: 42, B: 42, A: 255},
+			Image: "woodwall",
+			Color: &color.RGBA{R: 165, G: 42, B: 42, A: 255},
 		}
 	},
 	'.': func(g *Game) *Object {
 		return &Object{
-			image:   g.loadImage("grass"),
-			noblock: true,
+			Image:   "grass",
+			NoBlock: true,
 		}
 	},
 	'*': func(g *Game) *Object {
 		return &Object{
-			image: g.loadImage("tree"),
+			Image: "tree",
 		}
 	},
 	'/': func(g *Game) *Object {
 		return &Object{
-			image:   g.loadImage("tree-hideable"),
-			noblock: true,
-			z:       10,
+			Image:   "tree-hideable",
+			NoBlock: true,
+			Z:       10,
 		}
 	},
 	'+': func(g *Game) *Object {
 		return &Object{
-			tag:   "east door",
-			image: g.loadImage("door"),
-			color: &color.RGBA{R: 145, G: 22, B: 22, A: 255},
-			touch: func(o *Object, toucher *Object, act string) (blocked bool) {
+			Tag:   "east door",
+			Image: "door",
+			Color: &color.RGBA{R: 145, G: 22, B: 22, A: 255},
+			Touch: func(o *Object, toucher *Object, act string) (blocked bool) {
 				if act == "interact" {
-					o.noblock = !o.noblock
-					if o.noblock {
-						o.image = g.loadImage("door-open")
+					o.NoBlock = !o.NoBlock
+					if o.NoBlock {
+						go o.SetImage("door-open")
 					} else {
-						o.image = g.loadImage("door")
+						go o.SetImage("door")
 						go o.Say("*click*")
 					}
 					return true
 				}
-				if toucher.lastTouched != o && !o.noblock {
+				if toucher.lastTouched != o && !o.NoBlock {
 					go o.Say("*thump*")
-				} else if toucher.lastTouched == o && !o.noblock {
-					o.image = g.loadImage("door-open")
-					o.noblock = true
+				} else if toucher.lastTouched == o && !o.NoBlock {
+					go o.SetImage("door-open")
+					o.NoBlock = true
 					return true
 				}
 
-				return !o.noblock
+				return !o.NoBlock
 			},
 		}
 	},
@@ -86,9 +86,9 @@ var GlobalThings = ThingCreatorFuncs{
 			table = "table-food"
 		}
 		return &Object{
-			image: g.loadImage(table),
-			color: &color.RGBA{R: 145, G: 22, B: 22, A: 255},
-			touch: func(o *Object, toucher *Object, act string) (blocked bool) {
+			Image: table,
+			Color: &color.RGBA{R: 145, G: 22, B: 22, A: 255},
+			Touch: func(o *Object, toucher *Object, act string) (blocked bool) {
 				if o.image == g.loadImage("table-food") {
 					if act == "" && toucher.lastTouched != o {
 						go toucher.Say("food!")
@@ -106,29 +106,29 @@ var GlobalThings = ThingCreatorFuncs{
 	},
 	'h': func(g *Game) *Object {
 		return &Object{
-			image:   g.loadImage("chair-right"),
-			color:   &color.RGBA{R: 145, G: 22, B: 22, A: 255},
-			noblock: true,
+			Image:   "chair-right",
+			Color:   &color.RGBA{R: 145, G: 22, B: 22, A: 255},
+			NoBlock: true,
 		}
 	},
 	'n': func(g *Game) *Object {
 		return &Object{
-			image:   g.loadImage("chair-left"),
-			color:   &color.RGBA{R: 145, G: 22, B: 22, A: 255},
-			noblock: true,
+			Image:   "chair-left",
+			Color:   &color.RGBA{R: 145, G: 22, B: 22, A: 255},
+			NoBlock: true,
 		}
 	},
 	'w': func(g *Game) *Object {
 		return &Object{
-			image: g.loadImage("woodwallwindow"),
-			color: &color.RGBA{R: 165, G: 42, B: 42, A: 255},
+			Image: "woodwallwindow",
+			Color: &color.RGBA{R: 165, G: 42, B: 42, A: 255},
 		}
 	},
 	'~': func(g *Game) *Object {
 		return &Object{
-			image:   g.loadImage("water"),
-			color:   &color.RGBA{R: 0, G: 64, B: 255, A: 255},
-			noblock: true,
+			Image:   "water",
+			Color:   &color.RGBA{R: 0, G: 64, B: 255, A: 255},
+			NoBlock: true,
 		}
 	},
 }
@@ -156,18 +156,18 @@ func init() {
 		things: ThingCreatorFuncs{
 			'1': func(g *Game) *Object {
 				return &Object{
-					tag:   "npc",
-					image: g.loadImage("character"),
-					color: &color.RGBA{R: 255, G: 255, B: 255, A: 255},
-					z:     1,
+					Tag:   "npc",
+					Image: "character",
+					Color: &color.RGBA{R: 255, G: 255, B: 255, A: 255},
+					Z:     1,
 				}
 			},
 			'E': func(g *Game) *Object {
 				return &Object{
-					tag:   "east exit",
-					image: g.loadImage("exit"),
-					color: &color.RGBA{R: 255, G: 255, B: 255, A: 255},
-					touch: func(o, toucher *Object, act string) (shouldBlock bool) {
+					Tag:   "east exit",
+					Image: "exit",
+					Color: &color.RGBA{R: 255, G: 255, B: 255, A: 255},
+					Touch: func(o, toucher *Object, act string) (shouldBlock bool) {
 						go o.area.Travel("east woods", toucher)
 						return true
 					},
@@ -218,7 +218,7 @@ func init() {
 				npc.Say("They're a devious bunch")
 				npc2.Say("You don't know the half of it")
 			} else {
-				x, y, ok := a.PreviousObjectPosition(triggering.tag)
+				x, y, ok := a.PreviousObjectPosition(triggering.Tag)
 				if !ok {
 					door := a.GetObject("east exit")
 					x = door.x - 1
@@ -252,10 +252,10 @@ func init() {
 		things: ThingCreatorFuncs{
 			'<': func(g *Game) *Object {
 				return &Object{
-					tag:   "west exit",
-					image: g.loadImage("exit"),
-					color: &color.RGBA{R: 255, G: 255, B: 255, A: 255},
-					touch: func(o, toucher *Object, act string) (shouldBlock bool) {
+					Tag:   "west exit",
+					Image: "exit",
+					Color: &color.RGBA{R: 255, G: 255, B: 255, A: 255},
+					Touch: func(o, toucher *Object, act string) (shouldBlock bool) {
 						go o.area.Travel("start", toucher)
 						return true
 					},
@@ -263,9 +263,9 @@ func init() {
 			},
 			'v': func(g *Game) *Object {
 				return &Object{
-					image: g.loadImage("whirlpool"),
-					color: &color.RGBA{R: 64, G: 128, B: 255, A: 255},
-					touch: func(o, toucher *Object, act string) (shouldBlock bool) {
+					Image: "whirlpool",
+					Color: &color.RGBA{R: 64, G: 128, B: 255, A: 255},
+					Touch: func(o, toucher *Object, act string) (shouldBlock bool) {
 						go o.area.Travel("pool", toucher)
 						return true
 					},
@@ -277,19 +277,19 @@ func init() {
 					"*splort*",
 				}
 				return &Object{
-					image: g.loadImage("grass"),
-					color: &color.RGBA{R: 64, G: 196, B: 255, A: 255},
-					touch: func(o, toucher *Object, act string) (shouldBlock bool) {
+					Image: "grass",
+					Color: &color.RGBA{R: 64, G: 196, B: 255, A: 255},
+					Touch: func(o, toucher *Object, act string) (shouldBlock bool) {
 						sfx := opts[rand.Intn(len(opts))]
 						go o.Say(sfx)
 						return false
 					},
-					noblock: true,
+					NoBlock: true,
 				}
 			},
 		},
 		enter: func(a *Area, prev *Area, triggering *Object, first bool) {
-			x, y, ok := a.PreviousObjectPosition(triggering.tag)
+			x, y, ok := a.PreviousObjectPosition(triggering.Tag)
 			if !ok {
 				door := a.GetObject("west exit")
 				x = door.x + 1
@@ -321,10 +321,10 @@ func init() {
 		things: ThingCreatorFuncs{
 			'^': func(g *Game) *Object {
 				return &Object{
-					tag:   "up exit",
-					image: g.loadImage("exit"),
-					color: &color.RGBA{R: 64, G: 128, B: 255, A: 255},
-					touch: func(o, toucher *Object, act string) (shouldBlock bool) {
+					Tag:   "up exit",
+					Image: "exit",
+					Color: &color.RGBA{R: 64, G: 128, B: 255, A: 255},
+					Touch: func(o, toucher *Object, act string) (shouldBlock bool) {
 						go o.area.Travel("east woods", toucher)
 						return true
 					},
@@ -332,15 +332,15 @@ func init() {
 			},
 			'#': func(g *Game) *Object {
 				return &Object{
-					image: g.loadImage("groundwall"),
-					color: &color.RGBA{R: 96, G: 60, B: 12, A: 255},
+					Image: "groundwall",
+					Color: &color.RGBA{R: 96, G: 60, B: 12, A: 255},
 				}
 			},
 			'f': func(g *Game) *Object {
 				return &Object{
-					image: g.loadImage("froge"),
-					color: &color.RGBA{R: 64, G: 255, B: 160, A: 255},
-					touch: func(o, toucher *Object, act string) (shouldBlock bool) {
+					Image: "froge",
+					Color: &color.RGBA{R: 64, G: 255, B: 160, A: 255},
+					Touch: func(o, toucher *Object, act string) (shouldBlock bool) {
 						go o.Say("*ribbt*")
 						return true
 					},
@@ -375,30 +375,30 @@ func init() {
 		things: ThingCreatorFuncs{
 			'#': func(g *Game) *Object {
 				return &Object{
-					image: g.loadImage("heart"),
-					color: &color.RGBA{R: 255, G: 105, B: 180, A: 255},
+					Image: "heart",
+					Color: &color.RGBA{R: 255, G: 105, B: 180, A: 255},
 				}
 			},
 			'k': func(g *Game) *Object {
 				return &Object{
-					tag:    "kit",
-					image:  g.loadImage("kit"),
-					mirror: true,
-					color:  &color.RGBA{R: 204, G: 85, B: 0, A: 255},
+					Tag:    "kit",
+					Image:  "kit",
+					Mirror: true,
+					Color:  &color.RGBA{R: 204, G: 85, B: 0, A: 255},
 				}
 			},
 			'b': func(g *Game) *Object {
 				return &Object{
-					tag:   "birb",
-					image: g.loadImage("birb"),
-					color: &color.RGBA{R: 249, G: 246, B: 238, A: 255},
+					Tag:   "birb",
+					Image: "birb",
+					Color: &color.RGBA{R: 249, G: 246, B: 238, A: 255},
 				}
 			},
 			'p': func(g *Game) *Object {
 				return &Object{
-					tag:     "point",
-					image:   g.loadImage("empty"),
-					noblock: true,
+					Tag:     "point",
+					Image:   "empty",
+					NoBlock: true,
 				}
 			},
 		},

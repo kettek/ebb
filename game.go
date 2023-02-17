@@ -228,6 +228,7 @@ func (g *Game) loadArea(s string, o *Object) *Area {
 						obj.area = area
 						obj.x = x
 						obj.y = y
+						obj.image = g.loadImage(obj.Image)
 						area.objects = append(area.objects, obj)
 					}
 				}
@@ -243,7 +244,7 @@ func (g *Game) loadArea(s string, o *Object) *Area {
 		}
 		go g.DeactivateArea(prev)
 		if prev != nil && triggering != nil {
-			prev.traveledObjects[triggering.tag] = [2]int{triggering.x, triggering.y}
+			prev.traveledObjects[triggering.Tag] = [2]int{triggering.x, triggering.y}
 		}
 		go g.ActivateArea(area)
 		if area.mappe.enter != nil {
