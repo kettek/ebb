@@ -177,13 +177,13 @@ func init() {
 		enter: func(a *Area, prev *Area, triggering *Object, first bool) {
 			player := triggering
 			if player == nil {
-				player = a.GetObject("player")
+				player = a.Object("player")
 			}
 			triggering = player
 			if first {
 				a.game.ControlObject(player)
-				npc := a.GetObject("npc")
-				door := a.GetObject("east door")
+				npc := a.Object("npc")
+				door := a.Object("east door")
 				a.FollowObject(player)
 				a.Delay(60)
 				npc.Say("hey, come here!")
@@ -220,7 +220,7 @@ func init() {
 			} else {
 				x, y, ok := a.PreviousObjectPosition(triggering.Tag)
 				if !ok {
-					door := a.GetObject("east exit")
+					door := a.Object("east exit")
 					x = door.x - 1
 					y = door.y
 				}
@@ -291,7 +291,7 @@ func init() {
 		enter: func(a *Area, prev *Area, triggering *Object, first bool) {
 			x, y, ok := a.PreviousObjectPosition(triggering.Tag)
 			if !ok {
-				door := a.GetObject("west exit")
+				door := a.Object("west exit")
 				x = door.x + 1
 				y = door.y
 			}
@@ -350,7 +350,7 @@ func init() {
 		enter: func(a *Area, prev *Area, triggering *Object, first bool) {
 			player := triggering
 			a.FollowObject(player)
-			door := a.GetObject("up exit")
+			door := a.Object("up exit")
 			a.Exec(func() {
 				prev.removeObject(player)
 			})
@@ -403,11 +403,11 @@ func init() {
 			},
 		},
 		enter: func(a *Area, prev *Area, triggering *Object, first bool) {
-			point := a.GetObject("point")
+			point := a.Object("point")
 			a.FollowObject(point)
 			a.Delay(60)
-			birb := a.GetObject("birb")
-			kit := a.GetObject("kit")
+			birb := a.Object("birb")
+			kit := a.Object("kit")
 			birb.WalkTo(point)
 			kit.WalkTo(point)
 			kit.Step(1, 0)

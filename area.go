@@ -104,22 +104,35 @@ func (a *Area) Delay(amount int) bool {
 func (a *Area) NewObject(tag string, image string, color *color.RGBA) *Object {
 	done := make(chan *Object)
 	a.submit(func() bool {
-		o := &Object{
-			x:     -1,
-			y:     -1,
-			area:  a,
-			Tag:   tag,
-			Image: image,
-			image: a.game.loadImage(image),
-			Color: color,
-		}
-		done <- o
+		done <- a.newObject(tag, image, color)
 		return true
 	})
 	return <-done
 }
 
-func (a *Area) getObject(tag string) *Object {
+func (a *Area) newObject(tag string, image string, color *color.RGBA) *Object {
+	o := &Object{
+		x:     -1,
+		y:     -1,
+		area:  a,
+		Tag:   tag,
+		Image: image,
+		image: a.game.loadImage(image),
+		Color: color,
+	}
+	return o
+}
+
+func (a *Area) Object(tag string) *Object {
+	done := make(chan *Object)
+	a.submit(func() bool {
+		done <- a.object(tag)
+		return true
+	})
+	return <-done
+}
+
+func (a *Area) object(tag string) *Object {
 	for _, o := range a.objects {
 		if o.Tag == tag {
 			return o
@@ -128,19 +141,11 @@ func (a *Area) getObject(tag string) *Object {
 	return nil
 }
 
-func (a *Area) GetObject(tag string) *Object {
-	done := make(chan *Object)
-	a.submit(func() bool {
-		done <- a.getObject(tag)
-		return true
-	})
-	return <-done
-}
-
 func (a *Area) RemoveObject(tag string) *Object {
 	done := make(chan *Object)
 	a.submit(func() bool {
-		o := a.getObject(tag)
+		o := a.object(tag)
+		a.removeObject(o)
 		done <- o
 		return true
 	})
@@ -160,18 +165,23 @@ func (a *Area) removeObject(o *Object) *Object {
 func (a *Area) PlaceObject(o *Object, x, y int) *Object {
 	done := make(chan bool)
 	a.submit(func() bool {
-		o.area = a
-		o.x = x
-		o.y = y
-		o.image = a.game.loadImage(o.Image)
-		o.iterX = float64(o.x * o.image.Bounds().Dx())
-		o.iterY = float64(o.y * o.image.Bounds().Dy())
-		a.objects = append(a.objects, o)
-		a.sortObjects()
+		a.placeObject(o, x, y)
 		done <- true
 		return true
 	})
 	<-done
+	return o
+}
+
+func (a *Area) placeObject(o *Object, x, y int) *Object {
+	o.area = a
+	o.x = x
+	o.y = y
+	o.image = a.game.loadImage(o.Image)
+	o.iterX = float64(o.x * o.image.Bounds().Dx())
+	o.iterY = float64(o.y * o.image.Bounds().Dy())
+	a.objects = append(a.objects, o)
+	a.sortObjects()
 	return o
 }
 
@@ -194,11 +204,15 @@ func (a *Area) checkCollision(o *Object, x, y int, act string) (touch *Object) {
 func (a *Area) FollowObject(o *Object) {
 	done := make(chan bool)
 	a.submit(func() bool {
-		a.target = o
+		a.followObject(o)
 		done <- true
 		return true
 	})
 	<-done
+}
+
+func (a *Area) followObject(o *Object) {
+	a.target = o
 }
 
 func (a *Area) Exec(fnc func()) {
@@ -217,21 +231,29 @@ func (a *Area) Exec(fnc func()) {
 func (a *Area) Freeze() {
 	done := make(chan bool)
 	a.submit(func() bool {
-		a.lockedInput = true
+		a.freeze()
 		done <- true
 		return true
 	})
 	<-done
 }
 
+func (a *Area) freeze() {
+	a.lockedInput = true
+}
+
 func (a *Area) Thaw() {
 	done := make(chan bool)
 	a.submit(func() bool {
-		a.lockedInput = false
+		a.thaw()
 		done <- true
 		return true
 	})
 	<-done
+}
+
+func (a *Area) thaw() {
+	a.lockedInput = false
 }
 
 func (a *Area) Scene(fnc func()) {
